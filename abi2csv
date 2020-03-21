@@ -1,0 +1,52 @@
+#! /usr/bin/env python3
+
+# TODO output in ods / xlsx with:
+# - gradient color for the first column (distance between peaks) to avoid double calls
+# - colors for the bases themselves
+
+import Bio.SeqIO
+import csv
+import itertools
+import os
+import sys
+
+channels = {
+    'DATA9': 'G',
+    'DATA10': 'A',
+    'DATA11': 'T',
+    'DATA12': 'C',
+}
+
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        print(f'Usage: {sys.argv[0].split(os.sep)[-1]} <input.ab1>')
+        sys.exit(1)
+
+    record = Bio.SeqIO.read(sys.argv[1], 'abi')
+    annotations = record.annotations['abif_raw']
+
+    writer = csv.writer(sys.stdout)
+
+    previous_position = 0
+    for position in itertools.count(start=1):
+        row = [position - previous_position]
+        try:
+            max_base, max_value = 0, 0
+            sum = 0
+            for channel, base in channels.items():
+                value = annotations[channel][position]
+                sum += value
+                if value > max_value and value > annotations[channel][position - 1] and value > annotations[channel][position +1]:
+                    max_base = base
+                    max_value = value
+                row.append(value)
+            if sum > 20 and max_value > sum / 3:
+                row.append(max_base)
+                for channel, base in channels.items():
+                    value = annotations[channel][position]
+                    if base != max_base and value > sum / 3:
+                        row.append(base)
+                writer.writerow(row)
+                previous_position = position
+        except IndexError:
+            break

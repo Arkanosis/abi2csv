@@ -1,0 +1,5 @@
+/abi2csv.egg-info/
+/dist/
+*.ab1
+*#
+*~
